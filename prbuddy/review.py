@@ -9,8 +9,8 @@ from github import Github
 import openai
 
 # ─── CONFIG ─────────────────────────────────────────────────────────
-MODEL              = "gpt-4o"      # swap to gpt-4.1 when available
-TEMPERATURE        = 0.0
+MODEL              = "gpt-4.1"      # swap to gpt-4.1 when available
+TEMPERATURE        = 0.2
 MAX_CHARS_PER_SIDE = 20_000
 BIG_PR_LINES       = 400
 FAIL_THRESHOLD     = 4             # ≤4 ⇒ Request-Changes
@@ -63,13 +63,14 @@ for f in pr.get_files():
     before, after = before[:MAX_CHARS_PER_SIDE], after[:MAX_CHARS_PER_SIDE]
 
     prompt = textwrap.dedent(f"""
-    You are an uncompromising senior engineer.
+    You are an uncompromising senior engineer that checks Github pull requests.
 
     Return exactly TEN bullet points:
-      ✓ three good things
-      ✗ seven problems
+    three good things
+    seven problems
 
-    Then ONE line:  FINAL SCORE: X/5   (1=terrible, 5=perfect)
+    Then ONE about the code change line:  FINAL SCORE: X/5   (1=terrible, 5=perfect)
+    Your goal is to be critical about the codes and look if the changes are actualy good from the last code. 
 
     BEFORE ({f.filename})
     ---------------------
