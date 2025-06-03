@@ -1,109 +1,37 @@
 """
-PR-Buddy v6  – strict, full-context reviewer
-Outputs ten concise bullets (✓ good / ✗ bad) and FINAL SCORE: X/5
+Very first skeleton of PR-Buddy.
+Fetches the diff of the current PR, asks OpenAI for a review,
+and posts the result back as a comment.
 """
-
-import os, re, textwrap, json
-from pathlib import Path
+import os, requests
 from github import Github
 import openai
 
-# ─── CONFIG ─────────────────────────────────────────────────────────
-MODEL              = "gpt-4.1"      # swap to gpt-4.1 when available
-TEMPERATURE        = 0.2
-MAX_CHARS_PER_SIDE = 20_000
-BIG_PR_LINES       = 400
-FAIL_THRESHOLD     = 4             # ≤4 ⇒ Request-Changes
-# ────────────────────────────────────────────────────────────────────
-
-repo_full  = os.environ["GITHUB_REPOSITORY"]
-pr_number  = int(os.environ["PR_NUMBER"])
-gh_token   = os.environ["GITHUB_TOKEN"]
+# --- 1. Inputs & setup -------------------------------------------------------
+repo_fullname = os.environ["GITHUB_REPOSITORY"]          # e.g. Fantomas937/Modul-169-PR-Buddy
+pr_number      = int(os.environ["PR_NUMBER"])
+gh_token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")  # add any alias you like
+if not gh_token:
+    raise RuntimeError("GITHUB_TOKEN not set in env")
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
-gh   = Github(gh_token)
-repo = gh.get_repo(repo_full)
-pr   = repo.get_pull(pr_number)
-print(f"🔎 Reviewing PR #{pr_number} in {repo_full}")
+g      = Github(gh_token)
+repo   = g.get_repo(repo_fullname)
+pr     = repo.get_pull(pr_number)
 
-def ensure_label(name, color="ededed"):
-    if name not in [l.name for l in pr.get_labels()]:
-        try:
-            repo.get_label(name)
-        except Exception:
-            repo.create_label(name, color)
-        pr.add_to_labels(name)
+# --- 2. Grab the unified diff (patch) ----------------------------------------
+patch_text = requests.get(pr.patch_url, headers={"Authorization": f"token {gh_token}"}).text
+# Trim huge diffs so we stay within token limits
+patch_snippet = patch_text[:12000]
 
-# size label
-if sum(f.changes for f in pr.get_files()) > BIG_PR_LINES:
-    ensure_label("big-pr", "f9d0c4")
+# --- 3. Ask OpenAI for a review ----------------------------------------------
+prompt = f"Please review the following Git diff and suggest improvements:\n\n{patch_snippet}"
+resp   = openai.ChatCompletion.create(
+            model="gpt-4o-mini",   # or any model you have access to
+            messages=[{"role": "user", "content": prompt}]
+         )
+comment_body = resp.choices[0].message.content.strip()
 
-force_request = False
-for f in pr.get_files():
-    if f.filename.startswith("prbuddy/") and f.deletions > f.additions:
-        ensure_label("needs-work", "d93f0b")
-        force_request = True
-        break
-
-lint_text = Path("lint.txt").read_text()[:4000] if Path("lint.txt").exists() else "No lint output."
-
-sections, tot_tokens = [], 0
-for f in pr.get_files():
-    if f.status == "removed":
-        continue
-    try:
-        before = repo.get_contents(f.filename, ref=pr.base.sha).decoded_content.decode()
-    except Exception:
-        before = ""
-    try:
-        after = repo.get_contents(f.filename, ref=pr.head.sha).decoded_content.decode()
-    except Exception:
-        after = f.patch or ""
-
-    before, after = before[:MAX_CHARS_PER_SIDE], after[:MAX_CHARS_PER_SIDE]
-
-    prompt = textwrap.dedent(f"""
-    You are an uncompromising senior engineer that checks Github pull requests.
-
-    Then ONE about the code change line:  FINAL SCORE: X/5   (1=terrible, 5=perfect)
-    Your goal is to be critical about the codes and look if the changes are actualy good from the last code.
-    Describe these changes 
-
-    BEFORE ({f.filename})
-    ---------------------
-    {before}
-
-    AFTER ({f.filename})
-    --------------------
-    {after}
-
-    flake8 summary:
-    {lint_text}
-    """)
-
-    resp = openai.ChatCompletion.create(
-        model=MODEL,
-        temperature=TEMPERATURE,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    tot_tokens += resp.usage.total_tokens
-    sections.append(f"### {f.filename}\n{resp.choices[0].message.content.strip()}")
-
-body = "\n\n---\n\n".join(sections) if sections else "_No code to review._"
-
-match = re.search(r"FINAL\s+SCORE\s*:\s*([1-5])/5", body, re.I)
-score = int(match.group(1)) if match else 1
-if not match:
-    body = ("⚠️ **Required `FINAL SCORE: X/5` line missing – auto-failing.**\n\n"
-            + body)
-
-event = "REQUEST_CHANGES" if (force_request or score <= FAIL_THRESHOLD) else "COMMENT"
-ensure_label("needs-work" if event == "REQUEST_CHANGES" else "looks-good",
-             "d93f0b" if event == "REQUEST_CHANGES" else "0e8a16")
-
-pr.create_review(body=body, event=event)
-print(f"✅ {event}  |  score {score}/5  |  tokens {tot_tokens}")
-
-# expose summary
-print(f"::set-output name=summary::" +
-      json.dumps({"score": f"{score}/5", "event": event, "tokens": tot_tokens}))
+# --- 4. Post the comment back to the PR --------------------------------------
+pr.create_issue_comment(comment_body)
+print("✅ Review posted")
