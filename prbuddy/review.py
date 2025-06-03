@@ -10,7 +10,9 @@ import openai
 # --- 1. Inputs & setup -------------------------------------------------------
 repo_fullname = os.environ["GITHUB_REPOSITORY"]          # e.g. Fantomas937/Modul-169-PR-Buddy
 pr_number      = int(os.environ["PR_NUMBER"])
-gh_token       = os.environ["GITHUB_TOKEN"]              # auto-injected by Actions
+gh_token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")  # add any alias you like
+if not gh_token:
+    raise RuntimeError("GITHUB_TOKEN not set in env")
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
 g      = Github(gh_token)
