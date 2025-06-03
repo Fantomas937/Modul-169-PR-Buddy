@@ -5,17 +5,35 @@ on:
     types: [opened, synchronize]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install flake8
+      - name: Run flake8
+        run: |
+          flake8 . --exit-zero --format=default > lint.txt
+      - name: Upload lint artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint
+          path: lint.txt
+
   review:
+    needs: lint                          # wait for lint job
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: write        # allow the bot to post comments
+      pull-requests: write               # create review & add labels
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: lint , path: . }
 
       - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+        with: { python-version: "3.11" }
 
       - run: pip install "openai==0.28" PyGithub requests
 
@@ -23,5 +41,5 @@ jobs:
         run: python prbuddy/review.py
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN:   ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER:      ${{ github.event.pull_request.number }}
