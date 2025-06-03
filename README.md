@@ -12,6 +12,8 @@ PR-Buddy is an AI-powered tool that automates the review of pull requests. Its m
 - **Handles Removed Files**: Appropriately acknowledges and processes removed files in the review.
 - **Linting Summary**: Provides a summary of linting output if available, integrating it into the overall review.
 - **Customizable Review Focus**: Allows users to target specific aspects for review (e.g., performance, security) via an environment variable.
+- **Automated Security Review**: If enabled, PR-Buddy instructs the AI to check for common security vulnerabilities (e.g., hardcoded secrets, insecure input handling) and report them under a "Security Concerns" heading.
+- **AI-Powered Code Suggestions**: If enabled, PR-Buddy asks the AI to provide specific code snippet suggestions for improvements or fixes, where appropriate.
 
 ## Setup / Configuration
 
@@ -23,6 +25,8 @@ To use PR-Buddy, you need to set the following environment variables:
 - `OPENAI_API_KEY`: Your OpenAI API key.
         - `PRBUDDY_FOCUS_AREAS`: Optional. A comma-separated list of areas to focus the review on (e.g., `performance,security,readability`). PR-Buddy will instruct the AI to pay special attention to these aspects.
             Example: `PRBUDDY_FOCUS_AREAS="performance,error_handling"`
+        - `PRBUDDY_SECURITY_CHECK_ENABLED`: Optional. Set to `true` (default) or `false`. When enabled, instructs the AI to perform a basic security review of the code changes.
+        - `PRBUDDY_SUGGEST_CODE_ENABLED`: Optional. Set to `true` (default) or `false`. When enabled, instructs the AI to provide code snippet suggestions for identified issues or improvements.
 
 ### Optional Configuration
 Additional configuration options can be adjusted within the script:
@@ -57,6 +61,29 @@ To test the "Customizable Review Focus" feature, you would typically follow thes
 5.  **(Optional) Inspect Logs (if available):** If you have access to the logs of the `prbuddy/review.py` script execution, you could try to log the prompt being sent to the OpenAI API. This would allow you to directly verify that the line "Focus your review particularly on the following aspects: performance, security." (or similar) was correctly included in the prompt.
 
 This manual test helps confirm that the environment variable is being read correctly and that the prompt modification is influencing the review output as intended.
+
+### Testing Security Vulnerability Check
+
+To test the "Security Vulnerability Check" feature:
+
+1.  **Ensure Enabled:** Verify `PRBUDDY_SECURITY_CHECK_ENABLED` is set to `true` (or not set, as it defaults to true) in your test environment/workflow.
+2.  **Introduce a Vulnerability:** In a test PR, introduce a clear, simple security vulnerability. Examples:
+    *   Hardcode a fake API key: `API_KEY = "fak_thisIsAFakeKey_12345"`
+    *   A very obvious SQL injection pattern if your code interacts with a database (conceptual): `query = "SELECT * FROM users WHERE name = '" + user_input + "'"`
+3.  **Trigger PR-Buddy:** Run the review.
+4.  **Inspect Review Comment:** Check if the PR review comment includes a "Security Concerns" section and if it flags the introduced vulnerability. The AI might not catch everything, but obvious patterns should be its target.
+
+### Testing Suggest Code Snippets
+
+To test the "Suggest Code Snippets" feature:
+
+1.  **Ensure Enabled:** Verify `PRBUDDY_SUGGEST_CODE_ENABLED` is set to `true` (or not set, as it defaults to true).
+2.  **Introduce Flawed Code:** In a test PR, introduce a piece of code that has a clear, simple flaw or an obvious area for improvement that an AI could reasonably suggest a fix for. Examples:
+    *   A simple logical error: `if (a > b): return a` (missing else condition or incorrect logic).
+    *   Inefficient but simple code: A loop that could be a list comprehension.
+    *   Deprecated function usage (if the AI is trained on this).
+3.  **Trigger PR-Buddy:** Run the review.
+4.  **Inspect Review Comment:** Look for sections like "Code Suggestions" or inline Markdown code blocks where the AI suggests alternative or corrected code snippets. The quality and relevance of suggestions will vary, but the goal is to see the mechanism working.
 
 ## Contributing
 Contributions are welcome! Please open an issue to discuss your ideas or submit a pull request with your improvements.

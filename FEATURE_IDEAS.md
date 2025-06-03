@@ -8,10 +8,12 @@
 
 ## Feature Idea 2: Security Vulnerability Check
 
+- **Status:** Implemented
 - **Description:** Integrate with a lightweight, open-source security scanner (or use a specialized prompt for OpenAI) to identify potential common security vulnerabilities (e.g., OWASP Top 10 related, hardcoded secrets).
 - **Benefit:** Adds a layer of automated security screening to the review process.
 
 ## Feature Idea 3: Suggest Code Snippets
 
+- **Status:** Implemented
 - **Description:** Enhance the OpenAI prompt to not only identify issues but also to suggest specific code snippets for improvements where applicable (e.g., for fixing a bug or optimizing a small piece of code). These suggestions would be clearly marked as AI-generated.
 - **Benefit:** Makes the review more actionable and helps developers fix issues faster.

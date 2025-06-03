@@ -29,6 +29,14 @@ focus_areas_str    = os.environ.get("PRBUDDY_FOCUS_AREAS", "")
 # Parse focus areas string into a list
 focus_areas = [area.strip() for area in focus_areas_str.split(',') if area.strip()]
 
+# Environment variable to enable/disable security check
+security_check_enabled_str = os.environ.get("PRBUDDY_SECURITY_CHECK_ENABLED", "true")
+security_check_enabled = security_check_enabled_str.lower() == "true"
+
+# Environment variable to enable/disable code suggestions
+suggest_code_enabled_str = os.environ.get("PRBUDDY_SUGGEST_CODE_ENABLED", "true")
+suggest_code_enabled = suggest_code_enabled_str.lower() == "true"
+
 # Initialize GitHub and OpenAI clients
 openai.api_key = OPENAI_API_KEY
 gh   = Github(GITHUB_TOKEN)
@@ -97,9 +105,33 @@ for f in pr.get_files():
     if focus_areas:
         focus_instruction = f"Focus your review particularly on the following aspects: {', '.join(focus_areas)}.\n"
 
+    # Instruction for AI to perform a security review if enabled
+    security_instruction = ""
+    if security_check_enabled:
+        security_instruction = (
+            "Additionally, please conduct a security review of the changes. "
+            "Look for common vulnerabilities such as hardcoded secrets (API keys, passwords), "
+            "insecure input handling (e.g., potential for XSS or SQL injection if inputs are not sanitized), "
+            "use of known insecure libraries or functions, and insufficient logging or error handling "
+            "that might expose sensitive information. Report any findings under a distinct 'Security Concerns:' "
+            "heading in your review.\n"
+        )
+
+    # Instruction for AI to suggest code snippets if enabled
+    suggest_code_instruction = ""
+    if suggest_code_enabled:
+        suggest_code_instruction = (
+            "Furthermore, if you identify areas for improvement, bugs, or opportunities for optimization, "
+            "please provide specific code snippet suggestions for fixes or enhancements where appropriate. "
+            "Ensure these suggestions are clearly marked, for example, under a 'Code Suggestions:' heading "
+            "or by using Markdown for code blocks.\n"
+        )
+
     prompt = textwrap.dedent(f"""
     You are an uncompromising senior engineer that checks Github pull requests.
     {focus_instruction}
+    {security_instruction}
+    {suggest_code_instruction}
     Then ONE about the code change line:  FINAL SCORE: X/5   (1=terrible, 5=perfect)
     Your goal is to be critical about the codes and look if the changes are actualy good from the last code.
     Describe these changes 
