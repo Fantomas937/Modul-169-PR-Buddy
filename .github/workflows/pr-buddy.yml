@@ -36,6 +36,5 @@ jobs:
           OPENAI_API_KEY:  ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER:       ${{ github.event.pull_request.number }}
-      # ✅ surface score in the Check summary
-      - name: Write summary
+      - name: Result summary
         run: echo "${{ steps.prbuddy.outputs.summary }}" >> $GITHUB_STEP_SUMMARY
