@@ -17,8 +17,8 @@ import openai
 MODEL             = "gpt-4o-mini"
 TEMPERATURE       = 0.2
 MAX_PATCH_CHARS   = 10_000     # per chunk
-BIG_PR_LINES      = 400        # touched lines threshold for big-pr label
-RUBRIC_THRESHOLD  = 3          # <=3 triggers request-changes
+BIG_PR_LINES      = 400        # touched-lines threshold
+RUBRIC_THRESHOLD  = 3          # ≤3 → request changes
 # -----------------------------------
 
 # --- environment & clients ----------------------------------------
@@ -33,7 +33,7 @@ pr   = repo.get_pull(pr_number)
 
 print(f"📋 Reviewing PR #{pr_number} in {repo_full}")
 
-# --- helper to add a label only once ------------------------------
+# --- helper to add label once -------------------------------------
 def ensure_label(label: str):
     if label not in [l.name for l in pr.get_labels()]:
         pr.add_to_labels(label)
@@ -52,10 +52,10 @@ for f in pr.get_files():
         print("⚠️  Detected net deletions in prbuddy/, flagging needs-work")
         break
 
-# --- flake8 context -----------------------------------------------
+# --- flake8 context ------------------------------------------------
 lint_text = Path("lint.txt").read_text()[:4000] if Path("lint.txt").exists() else "No lint output."
 
-# --- collect review sections --------------------------------------
+# --- build review --------------------------------------------------
 review_sections = []
 
 for file in pr.get_files():
@@ -69,8 +69,8 @@ for file in pr.get_files():
 
         TASK:
         1. Provide bullet-point feedback on the Git diff chunk below.
-        2. End with **exactly one line** of the form  `SCORE: X/5`
-           where X is an integer (1 = terrible, 3 = acceptable, 5 = excellent).
+        2. End with **exactly one line** `SCORE: X/5`
+           where X is an integer (1=terrible, 3=acceptable, 5=excellent).
 
         FILE: {file.filename}
 
@@ -99,8 +99,7 @@ review_body = "\n\n---\n\n".join(review_sections)
 
 # --- extract rubric score -----------------------------------------
 m = re.search(r"SCORE:\s*([1-5])/5", review_body)
-score = int(m.group(1)) if m else RUBRIC_THRESHOLD  # default neutral
-
+score = int(m.group(1)) if m else RUBRIC_THRESHOLD
 print(f"Derived score: {score}/5")
 
 # --- decide review type & labels ----------------------------------
