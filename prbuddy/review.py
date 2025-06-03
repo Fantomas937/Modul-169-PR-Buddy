@@ -23,6 +23,11 @@ GITHUB_REPOSITORY  = os.environ["GITHUB_REPOSITORY"]  # Full name of the reposit
 PR_NUMBER          = int(os.environ["PR_NUMBER"])   # Number of the pull request being reviewed
 GITHUB_TOKEN       = os.environ["GITHUB_TOKEN"]       # GitHub token for API access
 OPENAI_API_KEY     = os.environ["OPENAI_API_KEY"]     # OpenAI API key
+# New environment variable for customizable review focus
+focus_areas_str    = os.environ.get("PRBUDDY_FOCUS_AREAS", "")
+
+# Parse focus areas string into a list
+focus_areas = [area.strip() for area in focus_areas_str.split(',') if area.strip()]
 
 # Initialize GitHub and OpenAI clients
 openai.api_key = OPENAI_API_KEY
@@ -87,9 +92,14 @@ for f in pr.get_files():
     # Construct the prompt for the OpenAI API.
     # System message sets the role and expectations for the AI.
     # Includes "before" and "after" code snippets and lint summary for context.
+    # Optionally include focus areas if provided.
+    focus_instruction = ""
+    if focus_areas:
+        focus_instruction = f"Focus your review particularly on the following aspects: {', '.join(focus_areas)}.\n"
+
     prompt = textwrap.dedent(f"""
     You are an uncompromising senior engineer that checks Github pull requests.
-
+    {focus_instruction}
     Then ONE about the code change line:  FINAL SCORE: X/5   (1=terrible, 5=perfect)
     Your goal is to be critical about the codes and look if the changes are actualy good from the last code.
     Describe these changes 

@@ -11,6 +11,7 @@ PR-Buddy is an AI-powered tool that automates the review of pull requests. Its m
 - **Automatic Labeling**: Automatically labels pull requests based on the review outcome (e.g., "big-pr", "needs-work", "looks-good").
 - **Handles Removed Files**: Appropriately acknowledges and processes removed files in the review.
 - **Linting Summary**: Provides a summary of linting output if available, integrating it into the overall review.
+- **Customizable Review Focus**: Allows users to target specific aspects for review (e.g., performance, security) via an environment variable.
 
 ## Setup / Configuration
 
@@ -20,6 +21,8 @@ To use PR-Buddy, you need to set the following environment variables:
 - `PR_NUMBER`: The number of the pull request being reviewed.
 - `GITHUB_TOKEN`: A GitHub token with permissions to read repository content and write PR reviews/labels.
 - `OPENAI_API_KEY`: Your OpenAI API key.
+        - `PRBUDDY_FOCUS_AREAS`: Optional. A comma-separated list of areas to focus the review on (e.g., `performance,security,readability`). PR-Buddy will instruct the AI to pay special attention to these aspects.
+            Example: `PRBUDDY_FOCUS_AREAS="performance,error_handling"`
 
 ### Optional Configuration
 Additional configuration options can be adjusted within the script:
@@ -33,6 +36,27 @@ Additional configuration options can be adjusted within the script:
 PR-Buddy is designed to be run in a GitHub Actions workflow. It will analyze the pull request specified by the environment variables and post a review comment with its findings and a final score.
 
 For an example of how to integrate PR-Buddy into your workflow, please refer to the `.github/workflows/pr-buddy.yml` file in this repository.
+
+## Testing Features
+
+### Testing Customizable Review Focus
+
+To test the "Customizable Review Focus" feature, you would typically follow these steps in a test PR:
+
+1.  **Configure the Environment Variable:** In your GitHub Actions workflow file (or by setting it directly if running the script locally for testing), set the `PRBUDDY_FOCUS_AREAS` environment variable.
+    *   Example: `PRBUDDY_FOCUS_AREAS: "performance,security"`
+
+2.  **Create a Test Pull Request:** Make some changes in a test branch and open a pull request. The changes ideally should have aspects related to your chosen focus areas. For example, if focusing on "performance", include some inefficient code.
+
+3.  **Trigger PR-Buddy:** Let the GitHub Action run, or manually execute the `prbuddy/review.py` script with the necessary environment variables pointing to your test PR.
+
+4.  **Inspect the Review Comment:**
+    *   Check the review comment posted by PR-Buddy on the pull request.
+    *   Look for indications that the AI's feedback is skewed towards or specifically mentions the focus areas you defined (e.g., "performance" and "security"). For instance, the review might highlight potential performance bottlenecks or security concerns more prominently if those were the focus areas.
+
+5.  **(Optional) Inspect Logs (if available):** If you have access to the logs of the `prbuddy/review.py` script execution, you could try to log the prompt being sent to the OpenAI API. This would allow you to directly verify that the line "Focus your review particularly on the following aspects: performance, security." (or similar) was correctly included in the prompt.
+
+This manual test helps confirm that the environment variable is being read correctly and that the prompt modification is influencing the review output as intended.
 
 ## Contributing
 Contributions are welcome! Please open an issue to discuss your ideas or submit a pull request with your improvements.

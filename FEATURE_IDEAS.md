@@ -2,6 +2,7 @@
 
 ## Feature Idea 1: Customizable Review Focus
 
+- **Status:** Implemented
 - **Description:** Allow users to specify areas of focus for the review via configuration in the workflow file or special comments in the PR description (e.g., `#prbuddy_focus: performance, security`). PR-Buddy would then tailor its review prompt to emphasize these aspects.
 - **Benefit:** Provides more targeted and relevant reviews based on PR-specific concerns.
 
