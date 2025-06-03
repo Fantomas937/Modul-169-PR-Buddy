@@ -33,13 +33,13 @@ pr   = repo.get_pull(pr_number)
 
 print(f"📋 Reviewing PR #{pr_number} in {repo_full}")
 
-# --- helper to add label once -------------------------------------
+# --- helper to add label only once --------------------------------
 def ensure_label(label: str):
     if label not in [l.name for l in pr.get_labels()]:
         pr.add_to_labels(label)
         print(f"🏷️  Added label '{label}'")
 
-# --- size / downgrade heuristics ----------------------------------
+# --- size & downgrade heuristics ----------------------------------
 touched_lines = sum(f.changes for f in pr.get_files())
 if touched_lines > BIG_PR_LINES:
     ensure_label("big-pr")
@@ -52,7 +52,7 @@ for f in pr.get_files():
         print("⚠️  Detected net deletions in prbuddy/, flagging needs-work")
         break
 
-# --- flake8 context ------------------------------------------------
+# --- flake8 context -----------------------------------------------
 lint_text = Path("lint.txt").read_text()[:4000] if Path("lint.txt").exists() else "No lint output."
 
 # --- build review --------------------------------------------------
