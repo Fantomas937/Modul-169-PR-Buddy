@@ -9,12 +9,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
+
       - run: pip install flake8
       - name: Run flake8
         run: |
           flake8 . --exit-zero --format=default > lint.txt
+
       - name: Upload lint artifact
         uses: actions/upload-artifact@v4
         with:
@@ -22,13 +25,14 @@ jobs:
           path: lint.txt
 
   review:
-    needs: lint                          # wait for lint job
+    needs: lint
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: write               # create review & add labels
+      pull-requests: write        # required to add reviews & labels
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with: { name: lint , path: . }
 
@@ -37,7 +41,7 @@ jobs:
 
       - run: pip install "openai==0.28" PyGithub requests
 
-      - name: Run review bot
+      - name: Run PR-Buddy
         run: python prbuddy/review.py
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
