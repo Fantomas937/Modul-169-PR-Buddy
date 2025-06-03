@@ -19,7 +19,8 @@ jobs:
   review:
     needs: lint
     runs-on: ubuntu-latest
-    permissions:               # ⬅️ lets the bot add reviews & labels
+
+    permissions:          # lets the bot post reviews & apply labels
       pull-requests: write
       issues: write
 
