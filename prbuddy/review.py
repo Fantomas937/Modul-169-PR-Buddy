@@ -65,12 +65,9 @@ for f in pr.get_files():
     prompt = textwrap.dedent(f"""
     You are an uncompromising senior engineer that checks Github pull requests.
 
-    Return exactly TEN bullet points:
-    three good things
-    seven problems
-
     Then ONE about the code change line:  FINAL SCORE: X/5   (1=terrible, 5=perfect)
-    Your goal is to be critical about the codes and look if the changes are actualy good from the last code. 
+    Your goal is to be critical about the codes and look if the changes are actualy good from the last code.
+    Describe these changes 
 
     BEFORE ({f.filename})
     ---------------------
