@@ -19,8 +19,7 @@ jobs:
   review:
     needs: lint
     runs-on: ubuntu-latest
-
-    permissions:          # lets the bot post reviews & apply labels
+    permissions:
       pull-requests: write
       issues: write
 
@@ -31,8 +30,12 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.11' }
       - run: pip install "openai==0.28" PyGithub requests
-      - run: python prbuddy/review.py
+      - id: prbuddy
+        run: python prbuddy/review.py
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_TOKEN:   ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER:      ${{ github.event.pull_request.number }}
+          OPENAI_API_KEY:  ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER:       ${{ github.event.pull_request.number }}
+      # ✅ surface score in the Check summary
+      - name: Write summary
+        run: echo "${{ steps.prbuddy.outputs.summary }}" >> $GITHUB_STEP_SUMMARY
