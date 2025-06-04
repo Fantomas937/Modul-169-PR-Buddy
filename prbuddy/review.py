@@ -42,6 +42,15 @@ openai.api_key = OPENAI_API_KEY
 gh   = Github(GITHUB_TOKEN)
 repo = gh.get_repo(GITHUB_REPOSITORY)
 pr   = repo.get_pull(PR_NUMBER)
+pr_body = pr.body or ""
+body_focus_areas = []
+for line in pr_body.splitlines():
+    match = re.search(r"#prbuddy_focus:\s*(.*)", line, re.I)
+    if match:
+        body_focus_areas = [a.strip() for a in match.group(1).split(',') if a.strip()]
+        break
+# Merge focus areas from PR body and environment variable
+focus_areas = sorted(set(focus_areas + body_focus_areas))
 print(f"🔎 Reviewing PR #{PR_NUMBER} in {GITHUB_REPOSITORY}")
 
 def ensure_label(name, color="ededed"):
