@@ -6,6 +6,8 @@ Outputs ten concise bullets (✓ good / ✗ bad) and FINAL SCORE: X/5
 """
 
 import os, re, textwrap, json
+import time
+import sys
 from pathlib import Path
 from github import Github
 import openai
@@ -16,6 +18,7 @@ TEMPERATURE        = 0.2            # Controls the randomness/strictness of the 
 MAX_CHARS_PER_SIDE = 20_000        # Maximum characters to consider for each side of the diff (before/after).
 BIG_PR_LINES       = 400            # Threshold for labeling a PR as "big-pr".
 FAIL_THRESHOLD     = 4              # Score at or below which the PR is marked as "needs-work" and changes are requested.
+MAX_RETRIES        = 3              # Number of times to retry OpenAI API calls
 # ────────────────────────────────────────────────────────────────────
 
 # Retrieve environment variables
@@ -57,6 +60,19 @@ def ensure_label(name, color="ededed"):
         except Exception:
             repo.create_label(name, color) # Create if not
         pr.add_to_labels(name) # Add label to PR
+
+def chat_completion_with_retry(**kwargs):
+    """Call OpenAI with retries and exponential backoff."""
+    delay = 1
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return openai.ChatCompletion.create(**kwargs)
+        except Exception as e:
+            print(f"OpenAI API error on attempt {attempt}/{MAX_RETRIES}: {e}")
+            if attempt == MAX_RETRIES:
+                return None
+            time.sleep(delay)
+            delay *= 2
 
 # Size labeling: Apply "big-pr" label if changes exceed BIG_PR_LINES.
 if sum(f.changes for f in pr.get_files()) > BIG_PR_LINES:
@@ -148,13 +164,18 @@ for f in pr.get_files():
     {lint_text}
     """)
 
-    # Call the OpenAI ChatCompletion API.
-    # Uses the specified MODEL and TEMPERATURE.
-    resp = openai.ChatCompletion.create(
+    # Call the OpenAI ChatCompletion API with retries.
+    resp = chat_completion_with_retry(
         model=MODEL,
         temperature=TEMPERATURE,
         messages=[{"role": "user", "content": prompt}],
     )
+    if resp is None:
+        pr.create_issue_comment(
+            "⚠️ PR-Buddy could not generate a review due to repeated OpenAI API errors."
+        )
+        print("❌ Failed to generate review after retries.")
+        sys.exit(0)
     tot_tokens += resp.usage.total_tokens
     # Extract the review content from the API response.
     sections.append(f"### {f.filename}\n{resp.choices[0].message.content.strip()}")
