@@ -183,7 +183,13 @@ ensure_label("needs-work" if event == "REQUEST_CHANGES" else "looks-good",
 pr.create_review(body=body, event=event)
 print(f"✅ {event}  |  score {score}/5  |  tokens {tot_tokens}")
 
-# Set GitHub Action output: Expose review summary data (score, event, tokens)
-# to be used by subsequent steps in the GitHub Actions workflow.
-print(f"::set-output name=summary::" +
-      json.dumps({"score": f"{score}/5", "event": event, "tokens": tot_tokens}))
+# Set GitHub Action output using the environment file defined by GITHUB_OUTPUT.
+# This replaces the deprecated ::set-output command.
+output_file = os.environ.get("GITHUB_OUTPUT")
+if output_file:
+    with open(output_file, "a") as fh:
+        fh.write(
+            "summary="
+            + json.dumps({"score": f"{score}/5", "event": event, "tokens": tot_tokens})
+            + "\n"
+        )
