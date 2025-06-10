@@ -1,4 +1,4 @@
-"""
+"""This is a test on how the AI will react
 PR-Buddy: An AI-powered GitHub Pull Request reviewer using OpenAI.
 
 PR-Buddy v6  – strict, full-context reviewer
